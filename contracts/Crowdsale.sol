@@ -2,14 +2,14 @@ pragma solidity ^0.4.11;
 
 import './MintableToken.sol';
 import './SafeMath.sol';
-import './tokenIncrement.sol';
+import './TokenBonus.sol';
 
 /**
  * @title Crowdsale
  * @dev Crowdsale is a base contract for managing a token crowdsale.
  * Crowdsales have a start and end timestamps, where investors can make
  * token purchases and the crowdsale will assign them tokens based
- * on a token per ETH rate. Funds collected are forwarded to a wallet
+ * on a token per ETH swaprate. Funds collected are forwarded to a wallet
  * as they arrive.
  */
 contract Crowdsale {
@@ -17,7 +17,7 @@ contract Crowdsale {
 
   // The token being sold
   MintableToken public token;
-  tokenIncrement public tokenIncrementControl;
+  TokenBonus public tokenBonusContract;
 
   // start and end timestamps where investments are allowed (both inclusive)
   uint256 public startTime;
@@ -27,11 +27,11 @@ contract Crowdsale {
   // address where funds are collected
   address public wallet;
 
-  address public thirdPartySponsor;
+  address public Sponsor;
 
   // how many token units a buyer gets per wei
-  uint256 public rate = 20;
-  uint256 public thirdPartyWithdrawalRate = 10;
+  uint256 public swaprate = 20;
+  uint256 public SponsorSwapRate = 10;
   bool sponsorWithdrawalStatus;
 
   // amount of raised money in wei
@@ -48,7 +48,7 @@ contract Crowdsale {
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
   modifier onlySposnor {
-    require (msg.sender == thirdPartySponsor);
+    require (msg.sender == Sponsor);
     _;
   }
 
@@ -59,16 +59,6 @@ contract Crowdsale {
 
   modifier isValidBeneficiary (address _addr) {
     require(_addr != 0x0);
-    _;
-  }
-
-  modifier hasSaleEnded {
-    require (hasEnded());
-    _;
-  }
-
-  modifier isCompleteValue {
-    require (checkCompleteValue());
     _;
   }
 
@@ -83,11 +73,11 @@ contract Crowdsale {
     require(_wallet != 0x0);
 
     token = createTokenContract();
-    tokenIncrementControl = createTokenIncrementContract(token, _TACvoting);
+    tokenBonusContract = createTokenBonusContract(token, _TACvoting);
     startTime = _startTime;
     endTime = _endTime;
     wallet = _wallet;
-    thirdPartySponsor = _sponsor;
+    Sponsor = _sponsor;
   }
 
   // creates the token to be sold.
@@ -97,8 +87,8 @@ contract Crowdsale {
   }
   // creates the token to be sold.
   // override this method to have crowdsale of a specific mintable token.
-  function createTokenIncrementContract(address tokencontract, address _TACvoting) internal returns (tokenIncrement) {
-    return new tokenIncrement(tokencontract, _TACvoting);
+  function createTokenBonusContract(address tokencontract, address _TACvoting) internal returns (TokenBonus) {
+    return new TokenBonus(tokencontract, _TACvoting);
   }
 
 
@@ -109,14 +99,14 @@ contract Crowdsale {
 
   // low level token purchase function
   function buyTokens(address beneficiary)
-    payable
-    isValid
-    isValidBeneficiary (beneficiary) {
+  payable
+  isValid
+  isValidBeneficiary (beneficiary) {
 
     uint256 etherAmount = msg.value;
 
     // calculate token amount to be created
-    uint256 tokens = etherAmount.mul(rate);
+    uint256 tokens = etherAmount.mul(swaprate);
 
     // update state
     amountRaised = amountRaised.add(etherAmount);
@@ -130,22 +120,20 @@ contract Crowdsale {
 
   // low level token purchase function
   function buyTokensforSponsor(address beneficiary)
-    payable
-    onlyOnceForSponsor
-    hasSaleEnded
-    isCompleteValue
-    onlySposnor
-    isValidBeneficiary (beneficiary) {
+  payable
+  onlyOnceForSponsor
+  onlySposnor
+  isValidBeneficiary (beneficiary) {
 
     uint256 etherAmount = msg.value;
 
     // calculate token amount to be created
-    uint256 tokens = etherAmount.mul(thirdPartyWithdrawalRate);
+    uint256 tokens = etherAmount.mul(SponsorSwapRate);
 
     // update state
     amountRaised = amountRaised.add(etherAmount);
     totalSupply  = totalSupply.add(tokens);
-    
+
     sponsorWithdrawalStatus = true;
     token.mint(beneficiary, tokens);
     TokenPurchase(msg.sender, beneficiary, etherAmount, tokens);
@@ -153,20 +141,11 @@ contract Crowdsale {
     forwardFunds();
   }
 
-  function claimTokenIncrement (address beneficiary)  {
-    uint tokens = tokenIncrementControl.mintTokenIncrement(beneficiary);
+  function claimTokenBonus (address beneficiary)  {
+    uint tokens = tokenBonusContract.mintTokenBonus(beneficiary);
     totalSupply  = totalSupply.add(tokens);
     token.mint(beneficiary, tokens);
   }
-  /*function recordBalanceChange (address _beneficiary, uint tokensAmount) {
-    token.changeBalance(_beneficiary, tokensAmount);
-  }*/
-
-  function diluteWaitForSponsorTokens () {
-    endTime = now;
-  }
-
-  function checkCompleteValue() returns (bool);
 
   // send ether to the fund collection wallet
   // override to create custom fund forwarding mechanisms

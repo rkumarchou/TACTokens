@@ -5,11 +5,9 @@ import './SafeMath.sol';
 import './MintableToken.sol';
 
 
-contract tokenIncrement is Ownable {
+contract TokenBonus is Ownable {
   using SafeMath for uint256;
 
-
-  event TokenHolderInitialized (uint _index, bool status);
   address public TACAddress;
 
 
@@ -27,7 +25,7 @@ contract tokenIncrement is Ownable {
 
   // A boolean that stores if token increment has been called by the owner from
   // the TACvoting contract.
-  bool public tokenIncrementInitiated;
+  bool public TokenBonusInitiated;
 
   // mapping that keeps track of the increment index at
   // which the owner is.
@@ -41,61 +39,52 @@ contract tokenIncrement is Ownable {
     _;
   }
 
-  /*// Modifier to check if an address already is a tokenHolder
+  // Modifier to check if an address already is a tokenHolder
   modifier isTokenHolder (address _addr) {
-    require (existingTokenHolder[uint(_addr)]);
+    require (token.balanceOf(_addr) > 0);
     _;
-  }*/
+  }
 
   // Modifier to check if an address is eligible for token increment
   // by checking the tokenHolders increment index.
-  modifier eligibleForTokenIncrement (address _addr) {
+  modifier eligibleForTokenBonus (address _addr) {
     require (tokenHolderIncrementIndex[_addr] < (nextIncrementIndexNumber - 1));
     _;
   }
 
-  function tokenIncrement (address _tokenContractAddress, address _TACvotingAddress) {
+  function TokenBonus (address _tokenContractAddress, address _TACvotingAddress) {
     TACAddress = _TACvotingAddress;
     token = MintableToken(_tokenContractAddress);
-  }
-
-  function checkBalance (address _addr) constant returns (uint) {
-    return token.balanceOf(_addr);
-  }
-
-  function checkIncrements (uint _index) returns (uint) {
-    return increments[_index];
   }
 
   // Function that is called from the TACvoting contract
   // whenever a special proposal corresponding to increment of tokens
   // is called.
   function addIncrement (uint _incrementPercentage)
-    onlyFromTAC {
-        tokenIncrementInitiated = true;
-        increments[nextIncrementIndexNumber] = _incrementPercentage;
-        nextIncrementIndexNumber ++;
-    }
+  onlyFromTAC {
+    TokenBonusInitiated = true;
+    increments[nextIncrementIndexNumber] = _incrementPercentage;
+    nextIncrementIndexNumber ++;
+  }
 
   // Function that mints the token increment, called from the wallet.
   // Mints all the token increments till date for a specific beneficiary.
-  // Called from the Wallet through the 'claimTokenIncrement' function.
-  function mintTokenIncrement (address beneficiary)
-    onlyOwner
-    eligibleForTokenIncrement(beneficiary)
-    returns (uint) {
-      uint256 i = tokenHolderIncrementIndex[beneficiary];
-      uint totalBalance = token.balanceOf(beneficiary);
-      uint totalTokens;
-      while (i < (nextIncrementIndexNumber-1)) {
-
-        uint tokens = (increments[i+1].mul(totalBalance))/100;
-        totalBalance = totalBalance.add(tokens);
-        totalTokens = totalTokens.add(tokens);
-        i++;
-      }
-      tokenHolderIncrementIndex[beneficiary] = i;
-      return totalTokens;
+  // Called from the Wallet through the 'claimTokenBonus' function.
+  function mintTokenBonus (address beneficiary)
+  onlyOwner
+  isTokenHolder(beneficiary)
+  eligibleForTokenBonus(beneficiary)
+  returns (uint) {
+    uint256 i = tokenHolderIncrementIndex[beneficiary];
+    uint totalBalance = token.balanceOf(beneficiary);
+    uint totalTokens;
+    while (i < (nextIncrementIndexNumber-1)) {
+      uint tokens = (increments[i+1].mul(totalBalance))/100;
+      totalBalance = totalBalance.add(tokens);
+      totalTokens = totalTokens.add(tokens);
+      i++;
     }
-
+    tokenHolderIncrementIndex[beneficiary] = i;
+    return totalTokens;
+  }
 }

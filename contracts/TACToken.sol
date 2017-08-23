@@ -4,7 +4,7 @@ pragma solidity ^0.4.11;
 
 import "./CappedCrowdsale.sol";
 import "./MintableToken.sol";
-import "./tokenIncrement.sol";
+import "./TokenBonus.sol";
 
 /**
  * @title TACCrowdSaleToken
@@ -43,8 +43,8 @@ contract TACCrowdSale is CappedCrowdsale {
     return new TACtoken();
   }
 
-  function createTokenIncrementContract(address tokenAddress, address _TACvoting) internal returns (tokenIncrement) {
-    return new tokenIncrement(tokenAddress, _TACvoting);
+  function createTokenBonusContract(address tokenAddress, address _TACvoting) internal returns (TokenBonus) {
+    return new TokenBonus(tokenAddress, _TACvoting);
   }
 
 }

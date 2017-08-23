@@ -11,12 +11,11 @@ contract CappedCrowdsale is Crowdsale {
   using SafeMath for uint256;
 
   uint256 public tokenCap = 6500000e18;
-  uint256 completeValue;
 
   // overriding Crowdsale#validPurchase to add extra cap logic
   // @return true if investors can buy at the moment
   function validPurchase() internal constant returns (bool) {
-    bool withinCap = totalSupply.add(msg.value * rate) <= tokenCap;
+    bool withinCap = totalSupply.add(msg.value * swaprate) <= tokenCap;
     return super.validPurchase() && withinCap;
   }
 
@@ -27,14 +26,8 @@ contract CappedCrowdsale is Crowdsale {
     return super.hasEnded() || capReached;
   }
 
-  function getValueForSponsor () onlySposnor hasSaleEnded returns (uint) {
-    uint value = (tokenCap - totalSupply) / thirdPartyWithdrawalRate;
-    completeValue = value;
+  function getEtherAMOUNTForRemainingTokens () returns (uint) {
+    uint value = (tokenCap - totalSupply) / SponsorSwapRate;
     return value;
   }
-
-  function checkCompleteValue () returns (bool) {
-    return (msg.value == completeValue);
-  }
-
 }
