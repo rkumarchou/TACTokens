@@ -24,7 +24,7 @@ contract TokenBonus is Ownable {
 
 
   // A boolean that stores if token increment has been called by the owner from
-  // the TACvoting contract.
+  // the TACVoting contract.
   bool public TokenBonusInitiated;
 
   // mapping that keeps track of the increment index at
@@ -33,7 +33,7 @@ contract TokenBonus is Ownable {
 
 
   // Modifier to make sure that a function is only called from
-  // the TACvoting contract.
+  // the TACVoting contract.
   modifier onlyFromTAC {
     require (msg.sender == TACAddress);
     _;
@@ -57,7 +57,7 @@ contract TokenBonus is Ownable {
     token = MintableToken(_tokenContractAddress);
   }
 
-  // Function that is called from the TACvoting contract
+  // Function that is called from the TACVoting contract
   // whenever a special proposal corresponding to increment of tokens
   // is called.
   function addIncrement (uint _incrementPercentage)

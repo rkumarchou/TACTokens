@@ -31,7 +31,7 @@ contract Crowdsale {
 
   // how many token units a buyer gets per wei
   uint256 public swaprate = 20;
-  uint256 public SponsorSwapRate = 10;
+  uint256 public SponsorSwapRate = 40;
   bool sponsorWithdrawalStatus;
 
   // amount of raised money in wei
@@ -46,13 +46,14 @@ contract Crowdsale {
    * @param amount amount of tokens purchased
    */
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
-
-  modifier onlySposnor {
+  event SponsorTokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+  event TokenBonusClaimed(address indexed beneficiary, uint256 amount);
+  modifier onlySponsor {
     require (msg.sender == Sponsor);
     _;
   }
 
-  modifier isValid {
+  modifier isValidPurchase {
     require (validPurchase());
     _;
   }
@@ -62,8 +63,8 @@ contract Crowdsale {
     _;
   }
 
-  modifier onlyOnceForSponsor {
-    require (!sponsorWithdrawalStatus);
+  modifier isValidPurchaseForSponsor {
+    require (validPurchaseForSponsor());
     _;
   }
 
@@ -100,7 +101,7 @@ contract Crowdsale {
   // low level token purchase function
   function buyTokens(address beneficiary)
   payable
-  isValid
+  isValidPurchase
   isValidBeneficiary (beneficiary) {
 
     uint256 etherAmount = msg.value;
@@ -121,8 +122,8 @@ contract Crowdsale {
   // low level token purchase function
   function buyTokensforSponsor(address beneficiary)
   payable
-  onlyOnceForSponsor
-  onlySposnor
+  onlySponsor
+  isValidPurchaseForSponsor
   isValidBeneficiary (beneficiary) {
 
     uint256 etherAmount = msg.value;
@@ -136,7 +137,7 @@ contract Crowdsale {
 
     sponsorWithdrawalStatus = true;
     token.mint(beneficiary, tokens);
-    TokenPurchase(msg.sender, beneficiary, etherAmount, tokens);
+    SponsorTokenPurchase(msg.sender, beneficiary, etherAmount, tokens);
 
     forwardFunds();
   }
@@ -145,6 +146,7 @@ contract Crowdsale {
     uint tokens = tokenBonusContract.mintTokenBonus(beneficiary);
     totalSupply  = totalSupply.add(tokens);
     token.mint(beneficiary, tokens);
+    TokenBonusClaimed(beneficiary, tokens);
   }
 
   // send ether to the fund collection wallet
@@ -153,6 +155,11 @@ contract Crowdsale {
     wallet.transfer(msg.value);
   }
 
+  function validPurchaseForSponsor() internal constant returns (bool) {
+    bool afterPeriod = now >= endTime;
+    bool nonZeroPurchase = msg.value != 0;
+    return afterPeriod && nonZeroPurchase;
+  }
   // @return true if the transaction can buy tokens
   function validPurchase() internal constant returns (bool) {
     bool withinPeriod = now >= startTime && now <= endTime;

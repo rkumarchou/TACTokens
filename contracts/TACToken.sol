@@ -46,5 +46,4 @@ contract TACCrowdSale is CappedCrowdsale {
   function createTokenBonusContract(address tokenAddress, address _TACvoting) internal returns (TokenBonus) {
     return new TokenBonus(tokenAddress, _TACvoting);
   }
-
 }

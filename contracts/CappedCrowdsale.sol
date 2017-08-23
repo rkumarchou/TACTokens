@@ -19,6 +19,13 @@ contract CappedCrowdsale is Crowdsale {
     return super.validPurchase() && withinCap;
   }
 
+  // overriding Crowdsale#validPurchaseForSponsor to add extra cap logic
+  // @return true if sponsor can buy at the moment
+  function validPurchaseForSponsor() internal constant returns (bool) {
+    bool withinCap = totalSupply.add(msg.value * SponsorSwapRate) <= tokenCap;
+    return super.validPurchaseForSponsor() && withinCap;
+  }
+
   // overriding Crowdsale#hasEnded to add cap logic
   // @return true if crowdsale event has ended
   function hasEnded() public constant returns (bool) {
@@ -26,8 +33,8 @@ contract CappedCrowdsale is Crowdsale {
     return super.hasEnded() || capReached;
   }
 
-  function getEtherAMOUNTForRemainingTokens () returns (uint) {
-    uint value = (tokenCap - totalSupply) / SponsorSwapRate;
+  function getEtherAmountForSponsorPurchase () returns (uint) {
+    uint value = (tokenCap - totalSupply) / (SponsorSwapRate * 1e18);
     return value;
   }
 }
