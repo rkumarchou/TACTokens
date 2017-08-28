@@ -5,6 +5,8 @@ pragma solidity ^0.4.11;
 import "./CappedCrowdsale.sol";
 import "./MintableToken.sol";
 import "./TokenBonus.sol";
+import "./SimpleWallet.sol";
+import "./TACVoting.sol";
 
 /**
  * @title TACCrowdSaleToken
@@ -32,8 +34,8 @@ contract TACtoken is MintableToken {
  */
 contract TACCrowdSale is CappedCrowdsale {
 
-  function TACCrowdSale(uint256 _startTime, uint256 _endTime , address _wallet, address _sponsor, address _TACvoting)
-    Crowdsale(_startTime, _endTime, _wallet, _sponsor, _TACvoting)
+  function TACCrowdSale(uint256 _startTime, uint256 _endTime , address _wallet, address _owner, address _sponsor, address _TACvoting)
+    Crowdsale(_startTime, _endTime, _wallet, _owner, _sponsor, _TACvoting)
   {
     //As goal needs to be met for a successful crowdsale
     //the value needs to less or equal than a cap which is limit for accepted funds

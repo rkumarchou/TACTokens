@@ -10,7 +10,7 @@ import './Crowdsale.sol';
 contract CappedCrowdsale is Crowdsale {
   using SafeMath for uint256;
 
-  uint256 public tokenCap = 6500000e18;
+  uint256 public tokenCap = 6900000e18;
 
   // overriding Crowdsale#validPurchase to add extra cap logic
   // @return true if investors can buy at the moment

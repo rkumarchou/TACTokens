@@ -26,13 +26,12 @@ contract Crowdsale {
 
   // address where funds are collected
   address public wallet;
-
+  address public owner;
   address public Sponsor;
 
   // how many token units a buyer gets per wei
-  uint256 public swaprate = 20;
-  uint256 public SponsorSwapRate = 40;
-  bool sponsorWithdrawalStatus;
+  uint256 public swaprate = 100;
+  uint256 public SponsorSwapRate = 150;
 
   // amount of raised money in wei
   uint256 public amountRaised;
@@ -48,6 +47,7 @@ contract Crowdsale {
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
   event SponsorTokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
   event TokenBonusClaimed(address indexed beneficiary, uint256 amount);
+
   modifier onlySponsor {
     require (msg.sender == Sponsor);
     _;
@@ -59,7 +59,12 @@ contract Crowdsale {
   }
 
   modifier isValidBeneficiary (address _addr) {
-    require(_addr != 0x0);
+    require (_addr != 0x0);
+    _;
+  }
+
+  modifier isExistingBeneficiary (address _addr) {
+    require (token.balanceOf(_addr) > 0);
     _;
   }
 
@@ -68,7 +73,9 @@ contract Crowdsale {
     _;
   }
 
-  function Crowdsale(uint256 _startTime, uint256 _endTime, address _wallet, address _sponsor, address _TACvoting) {
+
+
+  function Crowdsale(uint256 _startTime, uint256 _endTime, address _wallet, address _owner, address _sponsor, address _TACvoting) {
     require(_startTime >= now);
     require(_endTime >= _startTime);
     require(_wallet != 0x0);
@@ -79,6 +86,9 @@ contract Crowdsale {
     endTime = _endTime;
     wallet = _wallet;
     Sponsor = _sponsor;
+    owner = _owner;
+    totalSupply = totalSupply.add(1518000e18);
+    token.mint(owner, 1518000e18);
   }
 
   // creates the token to be sold.
@@ -91,7 +101,6 @@ contract Crowdsale {
   function createTokenBonusContract(address tokencontract, address _TACvoting) internal returns (TokenBonus) {
     return new TokenBonus(tokencontract, _TACvoting);
   }
-
 
   // fallback function can be used to buy tokens
   function () payable {
@@ -135,14 +144,14 @@ contract Crowdsale {
     amountRaised = amountRaised.add(etherAmount);
     totalSupply  = totalSupply.add(tokens);
 
-    sponsorWithdrawalStatus = true;
     token.mint(beneficiary, tokens);
     SponsorTokenPurchase(msg.sender, beneficiary, etherAmount, tokens);
 
     forwardFunds();
   }
 
-  function claimTokenBonus (address beneficiary)  {
+  function claimTokenBonus (address beneficiary)
+  isValidBeneficiary (beneficiary) {
     uint tokens = tokenBonusContract.mintTokenBonus(beneficiary);
     totalSupply  = totalSupply.add(tokens);
     token.mint(beneficiary, tokens);
@@ -171,6 +180,4 @@ contract Crowdsale {
   function hasEnded() public constant returns (bool) {
     return now > endTime;
   }
-
-
 }

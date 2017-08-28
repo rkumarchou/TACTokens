@@ -2,15 +2,10 @@ pragma solidity ^0.4.11;
 
 import "./TACToken.sol";
 import "./TokenBonus.sol";
+import "./SimpleWallet.sol";
 
 // This is the voting contract that will be used for calling the Proposals.
 contract TACVoting {
-
-  uint[128] public owners;
-
-  uint public numOwners;
-
-  mapping(uint => uint) ownerIndex;
 
   // The minimum debate period that a generic Proposal can have
   uint constant minProposalVoteDuration = 2 weeks;
@@ -27,6 +22,8 @@ contract TACVoting {
   TACtoken tokenControl;
 
   TokenBonus tokenBonusContract;
+
+  SimpleWallet walletContract;
 
   // Proposals to discuss TAC decisions
   Proposal[] public proposals;
@@ -86,20 +83,13 @@ contract TACVoting {
 
 
   modifier onlyowner {
-    require (ownerIndex[uint(msg.sender)] > 0);
+    require (walletContract.m_ownerIndex(uint(msg.sender)) > 0);
     _;
   }
 
-  function TACVoting (address[] _owners) {
-    numOwners = _owners.length + 1;
-    owners[1] = uint(msg.sender);
-    ownerIndex[uint(msg.sender)] = 1;
-    for (uint i = 0; i < _owners.length; ++i)
-    {
-        owners[2 + i] = uint(_owners[i]);
-        ownerIndex[uint(_owners[i])] = 2 + i;
-    }
 
+  function TACVoting (address _walletContract) {
+    walletContract = SimpleWallet(_walletContract);
     lastTimeMinQuorumMet = now;
     minQuorumDivisor = 2;
     proposals.length = 1; // avoids a Proposal with ID 0 because it is used
@@ -110,7 +100,7 @@ contract TACVoting {
   onlyowner
   returns (uint _ProposalID) {
 
-    require (_debatingPeriod >= minProposalVoteDuration && _debatingPeriod >= 8 weeks);
+    require (_debatingPeriod >= minProposalVoteDuration && _debatingPeriod <= 8 weeks);
 
     _ProposalID = proposals.length++;
     Proposal p = proposals[_ProposalID];
@@ -129,7 +119,7 @@ contract TACVoting {
   returns (uint _proposalID) {
 
     require (_debatingPeriod >= minProposalVoteDuration
-        && _debatingPeriod >= 8 weeks);
+        && _debatingPeriod <= 8 weeks);
 
     require (_incrementPercentage < 100
     && _incrementPercentage >= 0);
@@ -184,9 +174,7 @@ contract TACVoting {
   function unVote(uint _ProposalID){
     Proposal p = proposals[_ProposalID];
 
-    if (now >= p.votingDeadline) {
-        throw;
-    }
+    require(now < p.votingDeadline);
 
     if (p.votedYes[msg.sender]) {
         p.yea -= tokenControl.balanceOf(msg.sender);
@@ -219,14 +207,13 @@ contract TACVoting {
     }
 
     // Check if the Proposal can be executed
-    if (now < p.votingDeadline  // has the voting deadline arrived?
+    require (now >= p.votingDeadline  // has the voting deadline arrived?
         // Have the votes been counted?
-        || !p.open
-        || p.proposalPassed // anyone trying to call us recursively?
+        || p.open
+        || !p.proposalPassed // anyone trying to call us recursively?
         // Does the transaction code match the Proposal?
-        || p.proposalHash != sha3(_transactionData)
-        )
-            throw;
+        || p.proposalHash == sha3(_transactionData)
+        );
 
      uint quorum = p.yea + p.nay;
 
@@ -257,12 +244,12 @@ contract TACVoting {
    }
 
 
-  function diluteWaitPeriod (uint _proposalID, string _transactionData) {
+  /*function diluteWaitPeriod (uint _proposalID, string _transactionData) {
     Proposal p = proposals[_proposalID];
 
     require (p.proposalHash == sha3(_transactionData));
     p.votingDeadline = now;
-  }
+  }*/
 
 
   // closes the proposal once the proposal has been executed
